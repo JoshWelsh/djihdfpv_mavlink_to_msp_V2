@@ -10,9 +10,11 @@
 #define SERIAL_TYPE                                                 0       //0==SoftSerial(Arduino_Nano), 1==HardSerial(others)
 #define MAH_CALIBRATION_FACTOR                                      1.0f    //used to calibrate mAh reading.
 //#define SPEED_IN_KILOMETERS_PER_HOUR                                        //if commented out defaults to m/s
-//#define SPEED_IN_MILES_PER_HOUR
-#define USE_CRAFT_NAME_FOR_ALTITUDE_AND_SPEED                               //if commented out will display the current flight mode.
-#define USE_PITCH_ROLL_ANGLE_FOR_DISTANCE_AND_DIRECTION_TO_HOME             //comment out to disable
+#define SPEED_IN_MILES_PER_HOUR
+//#define USE_CRAFT_NAME_FOR_ALTITUDE_AND_SPEED                               //if commented out will display the current flight mode, unless next define is active
+#define USE_CRAFTNAME_FOR_DISTANCE_AND_DIRECTION_TO_HOME                    //if both this and above are commented out, will display the current flight mode
+//#define USE_PITCH_ROLL_ANGLE_FOR_DISTANCE_AND_DIRECTION_TO_HOME             //comment out to disable
+
 //#define IMPERIAL_UNITS                                                    //Altitude in feet, distance to home in miles.
 #define VEHICLE_TYPE                                                0       //0==ArduPlane, 1==ArduCopter, 2==INAVPlane, 3==INAVCopter. Used for flight modes
 #define STORE_GPS_LOCATION_IN_SUBTITLE_FILE                                 //comment out to disable. Stores GPS location in the goggles .srt file in place of the "uavBat:" field at a slow rate of ~2-3s per GPS coordinate
@@ -340,7 +342,7 @@ void send_msp_to_airunit()
 
     //MSP_NAME
 #ifdef USE_CRAFT_NAME_FOR_ALTITUDE_AND_SPEED
-    String cnameStr = "";
+    
 
 if(print_pause == 0){
   #ifdef IMPERIAL_UNITS
@@ -365,6 +367,34 @@ else if(print_pause == 1){
 #else
     memcpy(name.craft_name, craftname, sizeof(craftname));
 #endif
+
+#ifdef USE_CRAFTNAME_FOR_DISTANCE_AND_DIRECTION_TO_HOME
+String cnameStr = "";
+if(print_pause == 0){
+    #ifdef IMPERIAL_UNITS
+        distanceToHome = (uint32_t)((distanceToHome * 0.000621371192) * 10);  //meters to miles
+        //attitude.pitch = (int16_t)distanceToHome;
+  cnameStr = "D:" + (int16_t)distanceToHome;
+    #else
+        if(distanceToHome > 1000){
+            //attitude.pitch = (int16_t)(distanceToHome / 100); // switch from m to km when over 1000
+      cnameStr = "D:" + (int16_t)(distanceToHome / 100); // switch from m to km when over 1000
+        }
+        else{
+            //attitude.pitch = (int16_t)(distanceToHome * 10);
+      cnameStr = "D:" + (int16_t)(distanceToHome * 10);
+        }
+    #endif
+    //attitude.roll = (directionToHome - heading) * 10;
+    cnameStr = cnameStr + " B:" + (directionToHome - heading) * 10;
+}
+else if(print_pause == 1){
+    memcpy(name.craft_name, craftname, sizeof(craftname));
+}
+#else
+    memcpy(name.craft_name, craftname, sizeof(craftname));
+#endif
+
 
     msp.send(MSP_NAME, &name, sizeof(name));
 
