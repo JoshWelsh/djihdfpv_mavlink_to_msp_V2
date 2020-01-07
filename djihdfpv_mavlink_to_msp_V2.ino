@@ -9,7 +9,7 @@
 
 #define SERIAL_TYPE                                                 0       //0==SoftSerial(Arduino_Nano), 1==HardSerial(others)
 #define MAH_CALIBRATION_FACTOR                                      1.0f    //used to calibrate mAh reading.
-#define SPEED_IN_KILOMETERS_PER_HOUR                                        //if commented out defaults to m/s
+//#define SPEED_IN_KILOMETERS_PER_HOUR                                        //if commented out defaults to m/s
 //#define SPEED_IN_MILES_PER_HOUR
 #define USE_CRAFT_NAME_FOR_ALTITUDE_AND_SPEED                               //if commented out will display the current flight mode.
 #define USE_PITCH_ROLL_ANGLE_FOR_DISTANCE_AND_DIRECTION_TO_HOME             //comment out to disable
@@ -17,6 +17,8 @@
 #define VEHICLE_TYPE                                                0       //0==ArduPlane, 1==ArduCopter, 2==INAVPlane, 3==INAVCopter. Used for flight modes
 #define STORE_GPS_LOCATION_IN_SUBTITLE_FILE                                 //comment out to disable. Stores GPS location in the goggles .srt file in place of the "uavBat:" field at a slow rate of ~2-3s per GPS coordinate
 //#define DISPLAY_THROTTLE_POSITION                                         //will display the current throttle position(0-100%) in place of the osd_roll_pids_pos element.
+#define USE_ROLL_AS_SPEED                                                   //Will display the current speed (measurement uses IMPERIAL_UNITS if defined) in place of the osd_roll_angle_pos element.
+#define USE_PITCH_AS_ALTITUDE                                               //Will display the current altitude (measurement uses IMPERIAL_UNITS if defined) in place of the osd_pitch_angle_pos element.
 
 #include <GCS_MAVLink.h>
 #include <MSP.h>
@@ -430,8 +432,24 @@ else if(print_pause == 1){
     #endif
     attitude.roll = (directionToHome - heading) * 10;
 #else
-    attitude.pitch = pitch_angle;
-    attitude.roll = roll_angle;
+    #ifdef USE_PITCH_AS_ALTITUDE
+      #ifdef IMPERIAL_UNITS
+        attitude.pitch = ((int16_t)(relative_alt  / 1000 / 0.3048));
+      #else
+        attitude.pitch = (relative_alt  / 1000);
+      #endif
+    #else
+      attitude.pitch = pitch_angle;
+    #endif
+    #ifdef USE_ROLL_AS_SPEED
+      #ifdef IMPERIAL_UNITS
+        attitude.roll = ((uint16_t)(airspeed * 2.2369));
+      #else
+        attitude.roll = ((uint16_t)(airspeed));
+      #endif
+    #else
+      attitude.roll = roll_angle;
+    #endif
 #endif
     msp.send(MSP_ATTITUDE, &attitude, sizeof(attitude));
 
