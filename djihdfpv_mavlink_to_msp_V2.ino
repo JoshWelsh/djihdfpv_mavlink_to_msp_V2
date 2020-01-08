@@ -21,6 +21,7 @@
 //#define DISPLAY_THROTTLE_POSITION                                         //will display the current throttle position(0-100%) in place of the osd_roll_pids_pos element.
 #define USE_ROLL_AS_SPEED                                                   //Will display the current speed (measurement uses IMPERIAL_UNITS if defined) in place of the osd_roll_angle_pos element.
 #define USE_PITCH_AS_ALTITUDE                                               //Will display the current altitude (measurement uses IMPERIAL_UNITS if defined) in place of the osd_pitch_angle_pos element.
+//#define DISPLAY_WIND_SPEED_AND_DIRECTION                                  //Ardupilot only
 
 #include <GCS_MAVLink.h>
 #include <MSP.h>
@@ -94,10 +95,14 @@ uint16_t blink_sats_blank_pos = 234;
 int32_t textCounter = 0;
 uint32_t previousFlightMode = custom_mode;
 uint8_t print_pause = 0;
-uint32_t previousMillis_FLM = 0;
-const uint32_t next_interval_FLM = 10000;
+//uint32_t previousMillis_FLM = 0;
+//const uint32_t next_interval_FLM = 10000;
 uint8_t srtCounter = 1;
 uint8_t thr_position = 0;
+float wind_direction = 0;   // wind direction (degrees)
+float wind_speed = 0;       // wind speed in ground plane (m/s)
+float relative_wind_direction = 0;
+float climb_rate = 0.0;
 
 void setup()
 {
@@ -120,19 +125,20 @@ void loop()
 
         GPS_calculateDistanceAndDirectionToHome();
         set_flight_mode_flags();
-
+        mAh_drawn_calc();
+        blink_sats();
         send_msp_to_airunit();
 
-        f_mAhDrawn += ((float)amperage * 10.0 * (millis() - dt) / 3600000.0) * mAh_calib_factor;
-        mAhDrawn = (uint16_t)f_mAhDrawn;
-        dt = millis();
-
-        if(general_counter % 900 == 0 && set_home == 1 && blink_sats_orig_pos > 2000){
-            invert_pos(&osd_gps_sats_pos, &blink_sats_blank_pos);
-        }
-        else if(set_home == 0){
-            osd_gps_sats_pos = blink_sats_orig_pos;
-        }
+//        f_mAhDrawn += ((float)amperage * 10.0 * (millis() - dt) / 3600000.0) * mAh_calib_factor;
+//        mAhDrawn = (uint16_t)f_mAhDrawn;
+//        dt = millis();
+//
+//        if(general_counter % 900 == 0 && set_home == 1 && blink_sats_orig_pos > 2000){
+//            invert_pos(&osd_gps_sats_pos, &blink_sats_blank_pos);
+//        }
+//        else if(set_home == 0){
+//            osd_gps_sats_pos = blink_sats_orig_pos;
+//        }
         general_counter += next_interval_MSP;
         if(textCounter > 0)textCounter -= next_interval_MSP;
     }
@@ -148,27 +154,104 @@ void loop()
 
     if(batteryCellCount == 0 && vbat > 0)set_battery_cells_number();
 
-    if((system_status == MAV_STATE_CRITICAL || system_status == MAV_STATE_EMERGENCY) && (general_counter % 800 == 0))
-    {
-        char failsafe[15] = {'F','A','I','L','S','A','F','E',0};
-        show_text(&failsafe, 500);
-    }
+    check_system_status();
+
+//    if((system_status == MAV_STATE_CRITICAL || system_status == MAV_STATE_EMERGENCY) && (general_counter % 800 == 0))
+//    {
+//        char failsafe[15] = {'F','A','I','L','S','A','F','E',0};
+//        show_text(&failsafe, 500);
+//    }
 
     //display flight mode every 10s for 0.5s
-    uint32_t currentMillis_FLM = millis();
-    if ((uint32_t)(currentMillis_FLM - previousMillis_FLM) >= next_interval_FLM) {
-        previousMillis_FLM = currentMillis_FLM;
-        display_flight_mode(500);
-    }
+    if (general_counter % 10000 == 0)display_flight_mode(500);
+    
+//    uint32_t currentMillis_FLM = millis();
+//    if ((uint32_t)(currentMillis_FLM - previousMillis_FLM) >= next_interval_FLM) {
+//        previousMillis_FLM = currentMillis_FLM;
+//        display_flight_mode(500);
+//    }
 
     //set GPS home when 3D fix
     if(fix_type > 2 && set_home == 1 && gps_lat != 0 && gps_lon != 0 && numSat > 5){
-      gps_home_lat = gps_lat;
-      gps_home_lon = gps_lon;
-      gps_home_alt = gps_alt;
+//      gps_home_lat = gps_lat;
+//      gps_home_lon = gps_lon;
+//      gps_home_alt = gps_alt;
       GPS_calc_longitude_scaling(gps_home_lat);
       set_home = 0;
     }
+
+#ifdef DISPLAY_WIND_SPEED_AND_DIRECTION
+        display_wind_speed_and_direction();
+#endif  
+
+}
+void check_system_status()
+{
+    if(system_status == MAV_STATE_CRITICAL && (general_counter % 800 == 0)) 
+    {
+      char failsafe[15] = {"FAILSAFE"};
+      show_text(&failsafe, 500);
+    }
+    if(system_status == MAV_STATE_EMERGENCY && (general_counter % 800 == 0)) 
+    {
+      char em[15] = {"EMERGENCY"};
+      show_text(&em, 500);
+    }
+    if(system_status == MAV_STATE_CALIBRATING && (general_counter % 800 == 0)) 
+    {
+      char calib[15] = {"CALIBRATING"};
+      show_text(&calib, 500);
+    }
+}
+void blink_sats()
+{
+    if(general_counter % 900 == 0 && set_home == 1 && blink_sats_orig_pos > 2000){
+      invert_pos(&osd_gps_sats_pos, &blink_sats_blank_pos);
+    }
+    else if(set_home == 0){
+      osd_gps_sats_pos = blink_sats_orig_pos;
+    }
+}
+
+void mAh_drawn_calc()
+{
+    f_mAhDrawn += ((float)amperage * 10.0 * (millis() - dt) / 3600000.0) * mAh_calib_factor;
+    mAhDrawn = (uint16_t)f_mAhDrawn;
+    dt = millis();
+}
+
+void display_wind_speed_and_direction()
+{
+    relative_wind_direction = (360 + (wind_direction - heading));
+    if(relative_wind_direction < 0)relative_wind_direction += 360;
+    if(relative_wind_direction > 360)relative_wind_direction -= 360;
+
+    if((general_counter % 16000 == 0))
+    {
+      String w = "";
+      w = w + "WS: ";
+      #ifdef SPEED_IN_KILOMETERS_PER_HOUR
+          w = w + (wind_speed * 3.6) + " km/h";
+      #elif defined(SPEED_IN_MILES_PER_HOUR)
+          w = w + (wind_speed * 2.2369) + " mph";
+      #else
+          w = w + wind_speed + " m/s";         
+      #endif
+
+      char wind[15] = {0};
+      w.toCharArray(wind, 15);
+      show_text(&wind, 2000);
+    }
+
+    if((general_counter % 14000 == 0)) 
+    {
+      String w = "";
+      w = w + "WD: " + relative_wind_direction;
+      char wind[15] = {0};
+      w.toCharArray(wind, 15);
+      show_text(&wind, 2000);
+    }
+
 
 }
 
@@ -326,7 +409,7 @@ msp_analog_t analog = {0};
 msp_raw_gps_t raw_gps = {0};
 //msp_comp_gps_t comp_gps = {0};
 msp_attitude_t attitude = {0};
-//msp_altitude_t altitude = {0};
+msp_altitude_t altitude = {0};
 #ifdef DISPLAY_THROTTLE_POSITION
 msp_pid_t pid = {0};
 #endif
@@ -486,6 +569,13 @@ else if(print_pause == 1){
     //MSP_ALTITUDE
     // altitude.estimatedActualPosition = altitude_msp; //cm
     // msp.send(MSP_ALTITUDE, &altitude, sizeof(altitude));
+#ifdef IMPERIAL_UNITS
+    altitude.estimatedActualVelocity = (int16_t)(climb_rate * 3.281); //m/s to cm/s
+#else
+    //do the norm
+    altitude.estimatedActualVelocity = (int16_t)(climb_rate * 100); //m/s to cm/s    
+#endif
+    msp.send(MSP_ALTITUDE, &altitude, sizeof(altitude));
 
 #ifdef DISPLAY_THROTTLE_POSITION
     //MSP_PID_CONFIG
