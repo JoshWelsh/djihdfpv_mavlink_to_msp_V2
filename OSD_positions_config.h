@@ -8,7 +8,6 @@ const uint16_t osd_rssi_value_pos = 2061;
 const uint16_t osd_avg_cell_voltage_pos = 2072;
 const uint16_t osd_gps_lon_pos = 2540;
 const uint16_t osd_gps_lat_pos = 2534;
-const uint16_t osd_flymode_pos = 2433;
 const uint16_t osd_craft_name_pos = 2511;
 const uint16_t osd_current_draw_pos = 2102;
 const uint16_t osd_mah_drawn_pos = 2136;
@@ -18,9 +17,10 @@ const uint16_t osd_pitch_angle_pos = 2328;
 const uint16_t osd_roll_angle_pos = 2306;
 const uint16_t osd_crosshairs_pos = 234;
 //const uint16_t osd_altitude_pos = 2328;
-const uint16_t osd_numerical_vario_pos = 2360;
+const uint16_t osd_numerical_vario_pos = 2361;
 
 //not implemented or not available
+const uint16_t osd_flymode_pos = 234;
 const uint16_t osd_throttle_pos_pos = 234;
 const uint16_t osd_vtx_channel_pos = 234;
 const uint16_t osd_gps_speed_pos = 234;

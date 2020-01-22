@@ -15,7 +15,7 @@
 #define USE_CRAFTNAME_FOR_DISTANCE_AND_DIRECTION_TO_HOME                    //if both this and above are commented out, will display the current flight mode
 //#define USE_PITCH_ROLL_ANGLE_FOR_DISTANCE_AND_DIRECTION_TO_HOME             //comment out to disable
 
-//#define IMPERIAL_UNITS                                                    //Altitude in feet, distance to home in miles.
+#define IMPERIAL_UNITS                                                    //Altitude in feet, distance to home in miles.
 #define VEHICLE_TYPE                                                0       //0==ArduPlane, 1==ArduCopter, 2==INAVPlane, 3==INAVCopter. Used for flight modes
 #define STORE_GPS_LOCATION_IN_SUBTITLE_FILE                                 //comment out to disable. Stores GPS location in the goggles .srt file in place of the "uavBat:" field at a slow rate of ~2-3s per GPS coordinate
 //#define DISPLAY_THROTTLE_POSITION                                         //will display the current throttle position(0-100%) in place of the osd_roll_pids_pos element.
@@ -343,7 +343,8 @@ void mavl_receive()
             groundspeed = vfr_hud.groundspeed; //float
             heading = vfr_hud.heading;
             thr_position = (uint8_t)vfr_hud.throttle;
-            
+            //This is where VSI gets set
+            climb_rate=vfr_hud.climb;
             }
             break;
 
@@ -457,7 +458,7 @@ if(print_pause == 0){
     #ifdef IMPERIAL_UNITS
         distanceToHome = (uint32_t)((distanceToHome * 0.000621371192) * 10);  //meters to miles
         //attitude.pitch = (int16_t)distanceToHome;
-  cnameStr = "D:" + (int16_t)distanceToHome;
+        cnameStr = "D:" + (int16_t)distanceToHome;
     #else
         if(distanceToHome > 1000){
             //attitude.pitch = (int16_t)(distanceToHome / 100); // switch from m to km when over 1000
@@ -470,6 +471,7 @@ if(print_pause == 0){
     #endif
     //attitude.roll = (directionToHome - heading) * 10;
     cnameStr = cnameStr + " B:" + (directionToHome - heading) * 10;
+    memcpy(name.craft_name, craftname, sizeof(craftname));
 }
 else if(print_pause == 1){
     memcpy(name.craft_name, craftname, sizeof(craftname));
@@ -547,7 +549,7 @@ else if(print_pause == 1){
 #else
     #ifdef USE_PITCH_AS_ALTITUDE
       #ifdef IMPERIAL_UNITS
-        attitude.pitch = ((int16_t)(relative_alt  / 1000 / 0.3048));
+        attitude.pitch = ((int16_t)(relative_alt  / 100 / 0.3048));
       #else
         attitude.pitch = (relative_alt  / 1000);
       #endif
@@ -556,7 +558,7 @@ else if(print_pause == 1){
     #endif
     #ifdef USE_ROLL_AS_SPEED
       #ifdef IMPERIAL_UNITS
-        attitude.roll = ((uint16_t)(airspeed * 2.2369));
+        attitude.roll = ((uint16_t)(airspeed * 2.2369 * 10));
       #else
         attitude.roll = ((uint16_t)(airspeed));
       #endif
@@ -570,10 +572,10 @@ else if(print_pause == 1){
     // altitude.estimatedActualPosition = altitude_msp; //cm
     // msp.send(MSP_ALTITUDE, &altitude, sizeof(altitude));
 #ifdef IMPERIAL_UNITS
-    altitude.estimatedActualVelocity = (int16_t)(climb_rate * 3.281); //m/s to cm/s
+    altitude.estimatedActualVelocity = ((int16_t)(climb_rate * 3.281)); //m/s to cm/s
 #else
     //do the norm
-    altitude.estimatedActualVelocity = (int16_t)(climb_rate * 100); //m/s to cm/s    
+    altitude.estimatedActualVelocity = ((int16_t)(climb_rate * 100)); //m/s to cm/s    
 #endif
     msp.send(MSP_ALTITUDE, &altitude, sizeof(altitude));
 
