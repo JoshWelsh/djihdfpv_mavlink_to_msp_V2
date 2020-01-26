@@ -51,7 +51,8 @@ const char arduPlaneModeStr[24][15] PROGMEM =  {"MANUAL",
                                                 "QAUTOTUNE",
                                                 "QACRO"};
 
-#elif VEHICLE_TYPE == 1
+#endif
+#if VEHICLE_TYPE == 1
 //ArduCopter
 const typedef enum{
         STABILIZE =     0,  // manual airframe angle with manual throttle
@@ -105,9 +106,8 @@ const char arduCopterModeStr[26][15] PROGMEM = {"STABILIZE",
                                                 "FOLLOW",
                                                 "ZIGZAG",
                                                 "SYSTEMID"};
-
-
-#elif VEHICLE_TYPE == 2
+#endif
+#if VEHICLE_TYPE == 2
 //INAV Plane
 const char inavPlaneModeStr[24][15] PROGMEM =    {"MANUAL",
                                                   "POSITION_HOLD",
@@ -137,8 +137,8 @@ const typedef enum{
         STABILIZE       = 2,
         RTL             = 11
 }arduPlaneModes_e;
-
-#elif VEHICLE_TYPE == 3
+#endif
+#if VEHICLE_TYPE == 3
 //INAV Copter
 const char inavCopterModeStr[26][15] PROGMEM =   {"ANGLE",
                                                   "ACRO",

@@ -12,14 +12,13 @@ const uint16_t osd_craft_name_pos = 2511;
 const uint16_t osd_current_draw_pos = 2102;
 const uint16_t osd_mah_drawn_pos = 2136;
 uint16_t osd_gps_sats_pos = 2465;
-const uint16_t osd_main_batt_voltage_pos = 234;
 const uint16_t osd_pitch_angle_pos = 2328;
 const uint16_t osd_roll_angle_pos = 2306;
-const uint16_t osd_crosshairs_pos = 234;
-//const uint16_t osd_altitude_pos = 2328;
 const uint16_t osd_numerical_vario_pos = 2361;
 
 //not implemented or not available
+const uint16_t osd_crosshairs_pos = 234;    //avail, not implemented
+const uint16_t osd_main_batt_voltage_pos = 234;   //avail, not implemented
 const uint16_t osd_flymode_pos = 234;
 const uint16_t osd_throttle_pos_pos = 234;
 const uint16_t osd_vtx_channel_pos = 234;
